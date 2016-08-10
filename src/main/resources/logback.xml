@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<substitutionProperty name="log.base"
+		value="${catalina.base}/logs/cctv-baidudata-docking" />
+	<jmxConfigurator />
+
+	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>
+				%date [%thread] %-5level %logger{80} - %msg%n
+			</pattern>
+		</layout>
+	</appender>
+
+	<appender name="logfile"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<Encoding>UTF-8</Encoding>
+		<File>${log.base}/cctv-baidudata-docking.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>
+				${log.base}/cctv-baidudata-docking.%d{yyyy-MM-dd}.log.zip
+			</FileNamePattern>
+		</rollingPolicy>
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>
+				%date [%thread] %-5level %logger{80} - %msg%n
+			</pattern>
+		</layout>
+	</appender>
+	
+	<appender name="redisRpopGPSFile"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<Encoding>UTF-8</Encoding>
+		<File>${log.base}/cctv-baidudata-docking-redisRpopGPS.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>
+				${log.base}/cctv-baidudata-docking-redisRpopGPS.%d{yyyy-MM-dd}.log.zip
+			</FileNamePattern>
+		</rollingPolicy>
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>
+				%date %msg%n
+			</pattern>
+		</layout>
+	</appender>
+	<logger name="com.busap.cctv.baidudata.docking.task.ExecutorTask" level="info" additivity="false">
+		<appender-ref ref="redisRpopGPSFile" />
+		<appender-ref ref="stdout" />
+	</logger>
+
+	
+	<root name="com.busap.cctv.baidudata.docking">
+		<level value="info" />
+		<appender-ref ref="stdout" />
+		<appender-ref ref="logfile" />
+	</root>
+</configuration>
+

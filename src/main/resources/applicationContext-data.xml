@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+	
+	<import resource="applicationContext-env.xml"/>
+	
+	<bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="${db.connection.mysql.url}" />
+		<property name="username" value="${db.connection.username}" />
+		<property name="password" value="${db.connection.password}" />
+		<property name="maxActive" value="${db.pool.maxsize}" />
+		<!-- 最大空闲值，当经过一个高峰时间后，连接池可以慢慢将已经用不到的连接释放，一直减少到msxIdle为止 -->
+		<property name="maxIdle" value="${db.pool.maxIdle}" />
+		<!-- 最小空闲值，当空闲的连接数小于阀值时，连接池就会预申请一些连接，以免洪峰到来时来不及申请 -->
+		<property name="minIdle" value="${db.pool.minIdle}" />
+		<property name="testWhileIdle" value="true" />
+		<property name="timeBetweenEvictionRunsMillis" value="10000" />
+		<property name="minEvictableIdleTimeMillis" value="10000" />
+		<property name="validationQuery" value="${db.pool.validationQuery}" />
+		<property name="defaultAutoCommit" value="false" />
+	</bean>
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+	</bean>
+	<bean id="mysqlDialect"
+		class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+		<property name="staticField"
+			value="org.springframework.orm.jpa.vendor.Database.MYSQL" />
+	</bean>
+
+	<bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="persistenceUnitName" value="SpringJpa" />
+		<property name="packagesToScan" value="com.busap.cctv.baidudata.docking.domain" />
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+				<property name="showSql" value="${jpa.showSql}" />
+				<property name="database" ref="mysqlDialect" />
+			</bean>
+		</property>
+		<!-- 表名和字段名映射自动以下划线分隔 -->
+		<property name="jpaProperties">
+			<props>
+				<prop key="hibernate.ejb.naming_strategy">com.busap.jpa.SpringNamingStrategy</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+
+	<!-- 开启事务注解 -->
+	<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+	
+	<jpa:repositories base-package="com.busap.cctv.baidudata.docking.repository" />
+</beans>

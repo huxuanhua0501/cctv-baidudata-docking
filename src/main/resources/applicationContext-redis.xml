@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+		
+	<import resource="applicationContext-env.xml"/>
+	
+	<context:component-scan base-package="com.busap.cctv.baidudata.docking.redis"/>
+	<context:component-scan base-package="com.busap.cctv.baidudata.docking.service"/>
+	
+	<!-- redis 连接池配置 -->
+	<bean id="redisPoolCfg" class="redis.clients.jedis.JedisPoolConfig">
+		<property name="maxIdle" value="${redis.pool.maxIdle}" />
+		<property name="maxTotal" value="${redis.pool.maxTotal}" />
+		<property name="maxWaitMillis" value="${redis.pool.maxWaitMillis}" />
+		<property name="testOnBorrow" value="${redis.pool.testOnBorrow}"></property>
+	</bean>
+	
+	<!-- 构造原生连接池 -->
+	<bean id="jedisPool" class="redis.clients.jedis.JedisPool">
+		<constructor-arg index="0" ref="redisPoolCfg" />
+		<constructor-arg index="1" value="${redis.pool.host}" type="java.lang.String" />
+		<constructor-arg index="2" value="${redis.pool.port}" type="int" />
+		<constructor-arg index="3" value="${redis.pool.timeout}" />
+	</bean>
+	
+	<!-- redis 连接池配置 -->
+	<bean id="targetRedisPoolCfg" class="redis.clients.jedis.JedisPoolConfig">
+		<property name="maxIdle" value="${target.redis.pool.maxIdle}" />
+		<property name="maxTotal" value="${target.redis.pool.maxTotal}" />
+		<property name="maxWaitMillis" value="${target.redis.pool.maxWaitMillis}" />
+		<property name="testOnBorrow" value="${target.redis.pool.testOnBorrow}"></property>
+	</bean>
+	
+	<!-- 构造原生连接池 -->
+	<bean id="targetJedisPool" class="redis.clients.jedis.JedisPool">
+		<constructor-arg index="0" ref="targetRedisPoolCfg" />
+		<constructor-arg index="1" value="${target.redis.pool.host}" type="java.lang.String" />
+		<constructor-arg index="2" value="${target.redis.pool.port}" type="int" />
+		<constructor-arg index="3" value="${target.redis.pool.timeout}" />
+	</bean>
+</beans>
