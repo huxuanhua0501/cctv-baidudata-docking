@@ -206,7 +206,18 @@ public abstract class BaseJedis implements JedisAchieve {
 		}
 		return value;
 	}
-	
+	public List<String> hget2(int dbIndex, String key, String sign) {
+
+		Jedis jedis = getJedis();
+		List<String> d = null;
+		try {
+			jedis.select(dbIndex);
+			d = jedis.hmget(key, sign);
+		} finally {
+			returnResource(jedis);
+		}
+		return d;
+	}
 	public Map<byte [], byte []> hmset(int dbIndex, byte [] key, Map<byte [], byte []> hash) {
 		Jedis jedis = getJedis();
 		try {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 	<substitutionProperty name="log.base"
-		value="${catalina.base}/logs/cctv-baidudata-docking" />
+		value="../../deploy/logs/zddata" />
 	<jmxConfigurator />
 
 	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
@@ -15,7 +15,7 @@
 	<appender name="logfile"
 		class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<Encoding>UTF-8</Encoding>
-		<File>${log.base}/cctv-baidudata-docking.log</File>
+		<File>../../deploy/logs/zddata.log</File>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<FileNamePattern>
 				${log.base}/cctv-baidudata-docking.%d{yyyy-MM-dd}.log.zip

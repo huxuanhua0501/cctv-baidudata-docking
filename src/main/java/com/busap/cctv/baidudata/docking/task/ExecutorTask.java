@@ -2,19 +2,21 @@ package com.busap.cctv.baidudata.docking.task;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.busap.cctv.baidudata.docking.domain.BusTerminal;
 import com.busap.cctv.baidudata.docking.redis.JedisResultSet;
 import com.busap.cctv.baidudata.docking.redis.TargetJedisResultSet;
 import com.busap.cctv.baidudata.docking.repository.BusTerminalRepository;
 import com.busap.cctv.baidudata.docking.utility.Pinyin;
-
-import static com.busap.cctv.baidudata.docking.utility.Pinyin.Type;
+import com.busap.cctv.baidudata.docking.utility.Pinyin.Type;
+import com.fasterxml.jackson.databind.jsonFormatVisitors.JsonObjectFormatVisitor;
 
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
 
@@ -31,7 +33,7 @@ import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombi
  * @since CCTV BaiDu 1.0
  * @version $Revision: 1.0 $ $Date: 2016/07/27 14:28:00 $ $LastModified 2016/07/27 14:28:00 $
  */
-public abstract class ExecutorTask implements Runnable {
+public abstract class ExecutorTask extends LocationUtils implements Runnable {
 	
 	private final Logger LOG = LoggerFactory.getLogger(getClass());
 	
@@ -121,10 +123,14 @@ public abstract class ExecutorTask implements Runnable {
 		String value = null;
 		while (isRunning) {
 			try{
+				if(resultSet.rpop(index, redisKey)!=null)
 				value = resultSet.rpop(index, redisKey);//根据KEY读取从头部的REDIS库中队列的值
-				if(value != null){
-					
-					String[] strs = value.split(",");
+				
+				 if(value != null){
+					LOG.info("gps数据==========="+value);
+				    System.out.println(value);
+					String[] strs = value.split(" ");
+					if(strs.length==6){
 					ConcurrentHashMap<String,String> cmap = new ConcurrentHashMap<String,String>();
 					BusTerminal bus = repository.findByAppKeyAndStatus(strs[0], STATUS);
 					cmap.put("dataType", "GPS");
@@ -145,53 +151,33 @@ public abstract class ExecutorTask implements Runnable {
 					 * 判断距离，调取已存的经纬度（终点）(只比对出站的始发站的经纬度，不比较回来的终点站的经纬度)，
 					 * 进行判断，接近后打上下行（打点）
 					 */
-					 double distance =  getDistance(1.222,1.222,1.222,1.222);
-					
-					
-					cmap.put("lineDirection", "");
+					List<String> liststop = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_0");//上行
+					List<String> liststop1 = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_1");//下行
+//					System.out.println(liststop.get(0));
+					JSONObject jsonObj = (JSONObject) JSONObject.parse(liststop.get(0));
+					JSONObject jsonObj1 = (JSONObject) JSONObject.parse(liststop1.get(0));
+//					bus.et
+					double distance =  this.getDistance(Double.parseDouble((String) jsonObj.get("lat")), Double.parseDouble((String) jsonObj.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
+					double distance1 =  this.getDistance(Double.parseDouble((String) jsonObj1.get("lat")), Double.parseDouble((String) jsonObj1.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
+					if(distance<=800&&jsonObj.get("linedir").equals("0")){
+						targetResultSet.set(2, strs[0], "0");
+					}else if(distance1<=800&&jsonObj1.get("linedir").equals("1")){
+						targetResultSet.set(2, strs[0], "1");
+					}
+					String lineDirection=  targetResultSet.get(2, strs[0]);
+					if(lineDirection==null){
+						cmap.put("lineDirection", "");
+					}else{
+						
+						cmap.put("lineDirection", targetResultSet.get(2, strs[0]));
+					}
 					String lineId = bus.getBusLine().getId().toString(), 
 							areaName = bus.getBusLine().getArea().getName(),
 							areaCode = pinyin.toPinYin(areaName, "", LOWERCASE),
 							key = areaCode + "_" + lineId;
-					targetResultSet.hset(index, key, strs[0], cmap.toString());
-					
-					
-					
-//					String dataTransforStrings = value;
-//					int beginIndex = -1, i = 0, maxSize = fields.length;
-//					String [] dataTransforObjects = new String[maxSize];
-//					dataTransforObjects[i++] = redisKey;
-//					while((beginIndex = dataTransforStrings.indexOf(CH)) != -1){
-//						dataTransforObjects[i++] = dataTransforStrings.substring(0, beginIndex);
-//						dataTransforStrings = dataTransforStrings.substring(beginIndex + CH.length());
-//					}
-//					if(dataTransforStrings.length() > 0){
-//						Long timestamp = Long.parseLong(dataTransforStrings);
-//						Date timeDate = new Date(timestamp);
-//						dataTransforObjects[i++] = HMS.format(timestamp);
-//						dataTransforObjects[i++] = YMD.format(timeDate);
-//					}
-//					String appKey = dataTransforObjects[1];
-//					BusTerminal busTerminal = repository.findByAppKeyAndStatus(appKey, STATUS);
-//					if(busTerminal != null){
-//						dataTransforObjects[i++] = busTerminal.getBusLine().getName();
-//						dataTransforObjects[i] = "";
-//						StringBuilder gson = new StringBuilder();
-//						gson.append("{");
-//						for(i = 0; i < maxSize; i++){
-//							gson.append(String.format("\"%s\" : \"%s\"", fields[i], dataTransforObjects[i]));
-//							if(maxSize - 1 != i){
-//								gson.append(",");
-//							}
-//						}
-//						gson.append("}");
-//						String lineId = busTerminal.getBusLine().getId().toString(), 
-//								areaName = busTerminal.getBusLine().getArea().getName(),
-//								areaCode = pinyin.toPinYin(areaName, "", LOWERCASE),
-//								key = areaCode + "_" + lineId;
-//						targetResultSet.hset(index, key, appKey, gson.toString());
-				//	}
+					targetResultSet.hset(index, key, strs[0], JSON.toJSONString(cmap));
 				}
+					}
 			} catch (BadHanyuPinyinOutputFormatCombination e) {
 				LOG.error("城市名称转换拼音发生错误, 详细信息:" + e.getMessage());
 			} catch (NullPointerException ex) {
@@ -206,28 +192,13 @@ public abstract class ExecutorTask implements Runnable {
 		}	
 	}
 	
-	/** 
-     * 通过经纬度获取距离(单位：米) 
-     * @param lat1 
-     * @param lng1 
-     * @param lat2 
-     * @param lng2 
-     * @return 
-     */  
-    public  double getDistance(double lat1, double lng1, double lat2,  
-                                     double lng2) {  
-        double radLat1 = rad(lat1);  
-        double radLat2 = rad(lat2);  
-        double a = radLat1 - radLat2;  
-        double b = rad(lng1) - rad(lng2);  
-        double s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a / 2), 2)  
-                + Math.cos(radLat1) * Math.cos(radLat2)  
-                * Math.pow(Math.sin(b / 2), 2)));  
-        s = s * EARTH_RADIUS;  
-        s = Math.round(s * 10000d) / 10000d;  
-        s = s*1000;  
-        return s;  
-    } 
+	
+	
+
+	
+	
+	
+
     /**
      * 启动任务线程
      */
