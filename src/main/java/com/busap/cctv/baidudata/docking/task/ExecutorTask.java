@@ -122,73 +122,75 @@ public abstract class ExecutorTask extends LocationUtils implements Runnable {
 	public void run() {
 		String value = null;
 		while (isRunning) {
-			try{
-				if(resultSet.rpop(index, redisKey)!=null)
-				value = resultSet.rpop(index, redisKey);//根据KEY读取从头部的REDIS库中队列的值
-				
-				 if(value != null){
-					LOG.info("gps数据==========="+value);
-				    System.out.println(value);
-					String[] strs = value.split(" ");
-					if(strs.length==6){
-					ConcurrentHashMap<String,String> cmap = new ConcurrentHashMap<String,String>();
-					BusTerminal bus = repository.findByAppKeyAndStatus(strs[0], STATUS);
-					cmap.put("dataType", "GPS");
-					cmap.put("dplBus", strs[0]);
-					if(bus == null){
-						cmap.put("dplLine", "");
+			//if(resultSet.get(0, redisKey)!=null&& ! resultSet.get(0, redisKey).equals("")){
+				try{
+					value = resultSet.rpop(index, redisKey);//根据KEY读取从头部的REDIS库中队列的值
+					 if(value != null){
+					    //System.out.println(value);
+						 LOG.info("gps参数"+value);
+						 String[] strs = value.split(" ");
+						if(strs.length==6){
+						BusTerminal bus = repository.findByAppKeyAndStatus(strs[0], STATUS);
+						if(bus != null){
+							ConcurrentHashMap<String,String> cmap = new ConcurrentHashMap<String,String>();
+							cmap.put("dataType", "GPS");
+							cmap.put("dplBus", strs[0]);
+							cmap.put("dplLine", bus.getBusLine().getName());
+							Long timestamp = Long.parseLong(strs[5]);
+							Date timeDate = new Date(timestamp);
+							cmap.put("date", new SimpleDateFormat("yyyy-MM-dd").format(timeDate));
+							cmap.put("time", new SimpleDateFormat("HH:mm:ss").format(timeDate));
+							cmap.put("longitude", strs[3]);
+							cmap.put("latitude", strs[2]);
+							cmap.put("velocity", strs[4]);
+							cmap.put("direction", strs[1]);
+							/**
+							 * 判断距离，调取已存的经纬度（终点）(只比对出站的始发站的经纬度，不比较回来的终点站的经纬度)，
+							 * 进行判断，接近后打上下行（打点）
+							 */
+							List<String> liststop = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_0");//上行
+							List<String> liststop1 = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_1");//下行
+//							System.out.println(liststop.get(0));
+							JSONObject jsonObj = (JSONObject) JSONObject.parse(liststop.get(0));
+							JSONObject jsonObj1 = (JSONObject) JSONObject.parse(liststop1.get(0));
+//							bus.et
+							if(null !=jsonObj && null !=jsonObj ){
+								double distance =  this.getDistance(Double.parseDouble((String) jsonObj.get("lat")), Double.parseDouble((String) jsonObj.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
+								double distance1 =  this.getDistance(Double.parseDouble((String) jsonObj1.get("lat")), Double.parseDouble((String) jsonObj1.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
+								if(distance<=800&&jsonObj.get("linedir").equals("0")){
+									targetResultSet.set(2, strs[0], "0");
+								}else if(distance1<=800&&jsonObj1.get("linedir").equals("1")){
+									targetResultSet.set(2, strs[0], "1");
+								}
+							}
+							String lineDirection=  targetResultSet.get(2, strs[0]);
+							if(lineDirection==null){
+								cmap.put("lineDirection", "");
+							}else{
+								cmap.put("lineDirection", targetResultSet.get(2, strs[0]));
+							}
+							String  lineId = bus.getBusLine().getId().toString(), 
+									areaName = bus.getBusLine().getArea().getName(),
+									areaCode = pinyin.toPinYin(areaName, "", LOWERCASE),
+									key = areaCode + "_" + lineId;
+							targetResultSet.hset(index, key, strs[0], JSON.toJSONString(cmap));
 						}
-					cmap.put("dplLine", bus.getBusLine().getName());
-					Long timestamp = Long.parseLong(strs[5]);
-					Date timeDate = new Date(timestamp);
-					cmap.put("date", new SimpleDateFormat("yyyy-MM-dd").format(timeDate));
-					cmap.put("time", new SimpleDateFormat("HH:mm:ss").format(timeDate));
-					cmap.put("longitude", strs[3]);
-					cmap.put("latitude", strs[2]);
-					cmap.put("velocity", strs[4]);
-					cmap.put("direction", strs[1]);
-					/**
-					 * 判断距离，调取已存的经纬度（终点）(只比对出站的始发站的经纬度，不比较回来的终点站的经纬度)，
-					 * 进行判断，接近后打上下行（打点）
-					 */
-					List<String> liststop = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_0");//上行
-					List<String> liststop1 = targetResultSet.hget2(2, "stoptask", bus.getBusLine().getId()+"_1");//下行
-//					System.out.println(liststop.get(0));
-					JSONObject jsonObj = (JSONObject) JSONObject.parse(liststop.get(0));
-					JSONObject jsonObj1 = (JSONObject) JSONObject.parse(liststop1.get(0));
-//					bus.et
-					double distance =  this.getDistance(Double.parseDouble((String) jsonObj.get("lat")), Double.parseDouble((String) jsonObj.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
-					double distance1 =  this.getDistance(Double.parseDouble((String) jsonObj1.get("lat")), Double.parseDouble((String) jsonObj1.get("lon")), Double.parseDouble(strs[2]), Double.parseDouble(strs[3]));
-					if(distance<=800&&jsonObj.get("linedir").equals("0")){
-						targetResultSet.set(2, strs[0], "0");
-					}else if(distance1<=800&&jsonObj1.get("linedir").equals("1")){
-						targetResultSet.set(2, strs[0], "1");
-					}
-					String lineDirection=  targetResultSet.get(2, strs[0]);
-					if(lineDirection==null){
-						cmap.put("lineDirection", "");
-					}else{
 						
-						cmap.put("lineDirection", targetResultSet.get(2, strs[0]));
 					}
-					String lineId = bus.getBusLine().getId().toString(), 
-							areaName = bus.getBusLine().getArea().getName(),
-							areaCode = pinyin.toPinYin(areaName, "", LOWERCASE),
-							key = areaCode + "_" + lineId;
-					targetResultSet.hset(index, key, strs[0], JSON.toJSONString(cmap));
+						}
+				} catch (BadHanyuPinyinOutputFormatCombination e) {
+					LOG.error("城市名称转换拼音发生错误, 详细信息:" + e.getMessage());
+				} catch (NullPointerException ex) {
+					LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 空指针异常详细信息:" + ex.getMessage());
+				} catch (IllegalArgumentException ex) {
+					LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 参数不匹配详细信息:" + ex.getMessage());
+				} catch (RuntimeException ex) {
+					LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 运行时详细信息:" + ex.getMessage());
+				} catch (Exception ex) {
+					LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 详细信息:" + ex.getMessage());
 				}
-					}
-			} catch (BadHanyuPinyinOutputFormatCombination e) {
-				LOG.error("城市名称转换拼音发生错误, 详细信息:" + e.getMessage());
-			} catch (NullPointerException ex) {
-				LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 详细信息:" + ex.getMessage());
-			} catch (IllegalArgumentException ex) {
-				LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 详细信息:" + ex.getMessage());
-			} catch (RuntimeException ex) {
-				LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 详细信息:" + ex.getMessage());
-			} catch (Exception ex) {
-				LOG.error("GPS发布消息处理失败, [终端设备传输的字符串: " + value + "], 详细信息:" + ex.getMessage());
-			}
+			//}
+			
 		}	
 	}
 	
