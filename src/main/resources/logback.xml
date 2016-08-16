@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-	<substitutionProperty name="log.base"
-		value="../../deploy/logs/zddata" />
+ 	<!-- <substitutionProperty name="log.base" value="../../deploy/logs/baidu" />  -->
+  <substitutionProperty name="log.base" value="/baidu/data-api-tomcat/deploy/logs" />  
 	<jmxConfigurator />
 
 	<appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
@@ -12,13 +12,13 @@
 		</layout>
 	</appender>
 
-	<appender name="logfile"
-		class="ch.qos.logback.core.rolling.RollingFileAppender">
+	<appender name="logfile" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<Encoding>UTF-8</Encoding>
-		<File>../../deploy/logs/zddata.log</File>
+	  <File>/baidu/data-api-tomcat/deploy/logs/data.log</File> 
+       <!-- <File>D:\data.log</File>   -->
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<FileNamePattern>
-				${log.base}/cctv-baidudata-docking.%d{yyyy-MM-dd}.log.zip
+				${log.base}.%d{yyyy-MM-dd}.log.zip
 			</FileNamePattern>
 		</rollingPolicy>
 		<layout class="ch.qos.logback.classic.PatternLayout">
@@ -27,32 +27,35 @@
 			</pattern>
 		</layout>
 	</appender>
-	
-	<appender name="redisRpopGPSFile"
-		class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<Encoding>UTF-8</Encoding>
-		<File>${log.base}/cctv-baidudata-docking-redisRpopGPS.log</File>
-		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<FileNamePattern>
-				${log.base}/cctv-baidudata-docking-redisRpopGPS.%d{yyyy-MM-dd}.log.zip
-			</FileNamePattern>
-		</rollingPolicy>
-		<layout class="ch.qos.logback.classic.PatternLayout">
-			<pattern>
-				%date %msg%n
-			</pattern>
-		</layout>
-	</appender>
-	<logger name="com.busap.cctv.baidudata.docking.task.ExecutorTask" level="info" additivity="false">
-		<appender-ref ref="redisRpopGPSFile" />
+
+
+	<logger name="com.busap" level="debug" additivity="false">
+		<appender-ref ref="logfile" />
 		<appender-ref ref="stdout" />
 	</logger>
-
+	<logger name="org.springframework" level="debug"  additivity="false">
+		<appender-ref ref="stdout" />
+	</logger>
+	 <logger name="com.busap.cctv.baidudata.docking.task" level="DEBUG">
+	<appender-ref ref="logfile" />
+		<appender-ref ref="stdout" />
+</logger>  
+	<!-- jdbc -->
+	 <logger name="org.springframework.jdbc.core.JdbcTemplate" additivity="false" level="DEBUG">
+        <appender-ref ref="stdout" />
+    </logger>
+	 <logger name="org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate" additivity="false" level="DEBUG">
+        <appender-ref ref="stdout" />
+    </logger>
+    <logger name="org.springframework.jdbc.core.StatementCreatorUtils" additivity="false" level="TRACE">
+        <appender-ref ref="stdout" />
+    </logger>
 	
-	<root name="com.busap.cctv.baidudata.docking">
+	<root>
 		<level value="info" />
 		<appender-ref ref="stdout" />
 		<appender-ref ref="logfile" />
+	 
 	</root>
+	
 </configuration>
-
